@@ -53,8 +53,8 @@ conn.close()
 
 if rows:
     df = calculate_df(rows)
-    # Sortera efter mest undervärderad (mest negativ % först)
-    df = df.sort_values("pct_vs_idag_pot_slut_aret", ascending=True).reset_index(drop=True)
+    # Sortera efter mest undervärderad (störst positiv % först)
+    df = df.sort_values("pct_vs_idag_pot_slut_aret", ascending=False).reset_index(drop=True)
 
     # Visa debug-tabell med sorterade värden (kan tas bort senare)
     st.dataframe(df[["Bolag", "Kurs", "Pot_kurs_slut_aret", "pct_vs_idag_pot_slut_aret"]])
