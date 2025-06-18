@@ -1,12 +1,13 @@
-# 📊 Aktieanalysapp – P/S-baserad värdering
+# 📊 Aktieanalysapp (P/S-baserad)
 
-Denna Streamlit-app hjälper dig att analysera aktier baserat på P/S-tal och beräknar potentiell aktiekurs idag och i slutet av året.
+Ett enkelt verktyg för att analysera om aktier är under- eller övervärderade, baserat på förväntad omsättning och P/S-tal.
 
-## 🔧 Funktioner
-- Lägg till, redigera och ta bort bolag
-- Automatisk lagring i en SQLite-databas
-- Sortering av bolag efter mest undervärderad kurs
-- Färgmarkering och visning av potentiell uppsida i procent
+## 🧮 Funktioner
 
-## 🗂 Databas
-Appen använder en SQLite-databas som sparas i:
+- Lägg till bolag med nuvarande kurs, förväntad omsättning, antal aktier och P/S-tal
+- Se potentiella aktiekurser baserat på omsättning och P/S-snitt
+- Sortera bolag efter undervärdering
+- Redigera och ta bort bolag
+- All data sparas lokalt i SQLite (ingen data försvinner vid omstart)
+
+## 📁 Filstruktur
