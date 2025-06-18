@@ -54,8 +54,8 @@ conn.close()
 
 if rows:
     df = calculate_df(rows)
-    # Sortera efter mest undervärderad enligt framtida potentiell kurs
-    df = df.sort_values("% vs idag - pot kurs slut året").reset_index(drop=True)
+    # Sortera efter mest undervärderad enligt framtida potentiell kurs (mest negativ % först)
+    df = df.sort_values("% vs idag - pot kurs slut året", ascending=True).reset_index(drop=True)
 
     # Session state för index
     if "index" not in st.session_state:
