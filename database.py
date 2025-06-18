@@ -1,11 +1,15 @@
 import os
 import sqlite3
 
-DATA_MAPP = "/mnt/data"  # Persistent och skrivbar mapp i Streamlit Cloud
+DATA_MAPP = "data"
 DB_SOKVAG = os.path.join(DATA_MAPP, "database.db")
 
 def initiera_databas():
-    # Mappen /mnt/data finns alltid i Streamlit Cloud, därför skapar vi den inte här
+    # Skapa data-mappen om den inte finns
+    if not os.path.exists(DATA_MAPP):
+        os.makedirs(DATA_MAPP)
+
+    # Skapa tabellen om den inte finns
     conn = sqlite3.connect(DB_SOKVAG)
     c = conn.cursor()
     c.execute('''
