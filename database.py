@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DATA_DIR = "mnt/data"
+DATA_DIR = "data"
 DB_PATH = os.path.join(DATA_DIR, "database.db")
 
 def init_db():
@@ -26,7 +26,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-def insert_company(bolag, nuvarande_kurs, oms_i_ar, oms_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
+def insert_bolag(bolag, nuvarande_kurs, oms_i_ar, oms_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
@@ -37,7 +37,7 @@ def insert_company(bolag, nuvarande_kurs, oms_i_ar, oms_nasta_ar, antal_aktier, 
     conn.commit()
     conn.close()
 
-def get_all_companies():
+def hamta_alla_bolag():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM bolag")
@@ -45,7 +45,7 @@ def get_all_companies():
     conn.close()
     return bolag
 
-def update_company(id, bolag, nuvarande_kurs, oms_i_ar, oms_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
+def uppdatera_bolag(id, bolag, nuvarande_kurs, oms_i_ar, oms_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
@@ -61,7 +61,7 @@ def update_company(id, bolag, nuvarande_kurs, oms_i_ar, oms_nasta_ar, antal_akti
     conn.commit()
     conn.close()
 
-def delete_company(id):
+def ta_bort_bolag(id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM bolag WHERE id = ?", (id,))
