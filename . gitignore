@@ -1,13 +1,9 @@
-# Python
 __pycache__/
 *.pyc
-
-# Streamlit cache
-.streamlit/
-
-# SQLite-databas
-data/database.db
-
-# Miljöfiler
+*.pyo
+*.pyd
 .env
-*.env
+.venv
+env/
+venv/
+data/database.db
