@@ -1,40 +1,64 @@
 import sqlite3
+import os
 
-# ✅ Den enda tillåtna platsen för skrivbar, persistent lagring i Streamlit Cloud
+# Se till att rätt sökväg används
 DB_PATH = "/mnt/data/database.db"
 
 def init_db():
+    # Skapa mappen om den inte finns
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+    # Skapa databasen och tabellen om de inte redan finns
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS bolag (
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS companies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            namn TEXT NOT NULL,
-            kurs REAL NOT NULL,
-            oms1 REAL NOT NULL,
-            oms2 REAL NOT NULL,
-            aktier REAL NOT NULL,
-            ps1 REAL NOT NULL,
-            ps2 REAL NOT NULL,
-            ps3 REAL NOT NULL,
-            ps4 REAL NOT NULL,
-            ps5 REAL NOT NULL
+            name TEXT,
+            current_price REAL,
+            revenue_this_year REAL,
+            revenue_next_year REAL,
+            shares_outstanding INTEGER,
+            ps1 REAL,
+            ps2 REAL,
+            ps3 REAL,
+            ps4 REAL,
+            ps5 REAL
         )
     """)
     conn.commit()
     conn.close()
 
-def get_connection():
-    return sqlite3.connect(DB_PATH)
+def insert_company(data):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO companies (
+            name, current_price, revenue_this_year, revenue_next_year,
+            shares_outstanding, ps1, ps2, ps3, ps4, ps5
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, data)
+    conn.commit()
+    conn.close()
 
-def update_bolag(bolag_id, namn, kurs, oms1, oms2, aktier, ps):
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("""
-        UPDATE bolag SET
-            namn = ?, kurs = ?, oms1 = ?, oms2 = ?, aktier = ?,
-            ps1 = ?, ps2 = ?, ps3 = ?, ps4 = ?, ps5 = ?
-        WHERE id = ?
-    """, (namn, kurs, oms1, oms2, aktier, *ps, bolag_id))
+def get_all_companies():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM companies")
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def update_company(company_id, field, value):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(f"UPDATE companies SET {field} = ? WHERE id = ?", (value, company_id))
+    conn.commit()
+    conn.close()
+
+def delete_company(company_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM companies WHERE id = ?", (company_id,))
     conn.commit()
     conn.close()
