@@ -1,114 +1,102 @@
 import streamlit as st
-from database import init_db, insert_company, get_all_companies, update_company, delete_company
+from database import (
+    init_db, insert_company, get_all_companies,
+    update_company, delete_company
+)
 import os
+
+st.set_page_config(page_title="Aktieanalys", layout="wide")
 
 # Initiera databas
 init_db()
 
-st.set_page_config(page_title="Aktieanalys", layout="centered")
+# Hjälpfunktion för att räkna ut potentiella kurser
+def beräkna_potentiella_kurser(row):
+    snitt_ps = sum(row[6:11]) / 5
+    potentiell_kurs_idag = (row[3] / row[5]) * snitt_ps
+    potentiell_kurs_slutet_av_året = (row[4] / row[5]) * snitt_ps
+    under_over_idag = ((potentiell_kurs_idag - row[2]) / row[2]) * 100
+    under_over_slutet = ((potentiell_kurs_slutet_av_året - row[2]) / row[2]) * 100
+    return potentiell_kurs_idag, potentiell_kurs_slutet_av_året, under_over_idag, under_over_slutet
 
-st.title("📊 Aktieanalysapp")
+st.title("📈 Aktieanalys")
 
-# Första inmatningsformuläret
-with st.form("add_company_form"):
-    st.subheader("Lägg till nytt bolag")
-    namn = st.text_input("Bolag")
-    nuvarande_kurs = st.number_input("Nuvarande kurs", format="%.2f")
-    omsättning_i_år = st.number_input("Förväntad omsättning i år", format="%.0f")
-    omsättning_nästa_år = st.number_input("Förväntad omsättning nästa år", format="%.0f")
-    antal_aktier = st.number_input("Antal utestående aktier", format="%.0f")
-    ps1 = st.number_input("P/S 1", format="%.2f")
-    ps2 = st.number_input("P/S 2", format="%.2f")
-    ps3 = st.number_input("P/S 3", format="%.2f")
-    ps4 = st.number_input("P/S 4", format="%.2f")
-    ps5 = st.number_input("P/S 5", format="%.2f")
+# Lägga till nytt bolag
+with st.expander("➕ Lägg till nytt bolag"):
+    with st.form("add_company"):
+        bolag = st.text_input("Bolag")
+        nuvarande_kurs = st.number_input("Nuvarande kurs", format="%.2f")
+        omsättning_i_år = st.number_input("Förväntad omsättning i år", format="%.0f")
+        omsättning_nästa_år = st.number_input("Förväntad omsättning nästa år", format="%.0f")
+        antal_aktier = st.number_input("Antal utestående aktier", format="%.0f")
+        ps1 = st.number_input("P/S 1", format="%.2f")
+        ps2 = st.number_input("P/S 2", format="%.2f")
+        ps3 = st.number_input("P/S 3", format="%.2f")
+        ps4 = st.number_input("P/S 4", format="%.2f")
+        ps5 = st.number_input("P/S 5", format="%.2f")
+        submitted = st.form_submit_button("Lägg till bolag")
+        if submitted and bolag:
+            insert_company(bolag, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5)
+            st.success("Bolag tillagt.")
+            st.session_state["refresh"] = True
 
-    submitted = st.form_submit_button("Lägg till bolag")
-    if submitted and namn:
-        insert_company(namn, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5)
-        st.success(f"{namn} har lagts till.")
-        st.session_state.data_changed = True
+# Hämta alla bolag
+companies = get_all_companies()
 
-# Läs in data
-if "data_changed" not in st.session_state:
-    st.session_state.data_changed = True
+# Sortera bolagen efter mest undervärderade (baserat på slutet av året)
+bolag_beräkningar = []
+for row in companies:
+    pki, pks, uo_idag, uo_slut = beräkna_potentiella_kurser(row)
+    bolag_beräkningar.append((row, pki, pks, uo_idag, uo_slut))
 
-if st.session_state.data_changed:
-    companies = get_all_companies()
-    st.session_state.data_changed = False
-else:
-    companies = get_all_companies()
+bolag_beräkningar.sort(key=lambda x: x[4], reverse=True)
 
-# Sortera efter mest undervärderad (framtida potentiell kurs)
-def beräkna_procent_uppgång(omsättning, aktier, ps, nuvarande_kurs):
-    if aktier == 0:
-        return 0
-    genomsnitt_ps = sum(ps) / 5
-    potentiell_kurs = omsättning / aktier * genomsnitt_ps
-    return (potentiell_kurs - nuvarande_kurs) / nuvarande_kurs * 100 if nuvarande_kurs != 0 else 0
+if "bolags_index" not in st.session_state:
+    st.session_state["bolags_index"] = 0
 
-companies = sorted(
-    companies,
-    key=lambda x: beräkna_procent_uppgång(x[3], x[4], x[5:10], x[2]),
-    reverse=True
-)
+if bolag_beräkningar:
+    index = st.session_state["bolags_index"]
+    row, pki, pks, uo_idag, uo_slut = bolag_beräkningar[index]
+    st.subheader(f"{row[1]}")
 
-st.subheader("📌 Bolag (sorterade efter mest undervärderade)")
+    st.markdown(f"""
+    **Nuvarande kurs:** {row[2]:.2f} kr  
+    **Potentiell kurs (idag):** {pki:.2f} kr ({uo_idag:+.1f}%)  
+    **Potentiell kurs (slutet av året):** {pks:.2f} kr ({uo_slut:+.1f}%)  
+    """)
 
-if not companies:
-    st.info("Inga bolag inlagda ännu.")
-else:
-    for index, company in enumerate(companies):
-        with st.expander(company[1], expanded=True):
-            nuvarande_kurs = company[2]
-            oms_år = company[3]
-            oms_nästa = company[4]
-            aktier = company[5]
-            ps_tal = company[6:11]
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        if st.button("⬅️ Föregående", disabled=index == 0):
+            st.session_state["bolags_index"] -= 1
+    with col2:
+        if st.button("Nästa ➡️", disabled=index == len(bolag_beräkningar) - 1):
+            st.session_state["bolags_index"] += 1
 
-            if aktier == 0:
-                continue
+    with st.expander("✏️ Redigera bolag"):
+        with st.form(f"edit_{row[0]}"):
+            nuvarande_kurs = st.number_input("Nuvarande kurs", value=row[2], format="%.2f")
+            omsättning_i_år = st.number_input("Förväntad omsättning i år", value=row[3], format="%.0f")
+            omsättning_nästa_år = st.number_input("Förväntad omsättning nästa år", value=row[4], format="%.0f")
+            antal_aktier = st.number_input("Antal utestående aktier", value=row[5], format="%.0f")
+            ps1 = st.number_input("P/S 1", value=row[6], format="%.2f")
+            ps2 = st.number_input("P/S 2", value=row[7], format="%.2f")
+            ps3 = st.number_input("P/S 3", value=row[8], format="%.2f")
+            ps4 = st.number_input("P/S 4", value=row[9], format="%.2f")
+            ps5 = st.number_input("P/S 5", value=row[10], format="%.2f")
+            update = st.form_submit_button("Spara ändringar")
+            if update:
+                update_company(row[0], nuvarande_kurs, omsättning_i_år, omsättning_nästa_år,
+                               antal_aktier, ps1, ps2, ps3, ps4, ps5)
+                st.success("Bolag uppdaterat.")
+                st.session_state["refresh"] = True
 
-            genomsnitt_ps = sum(ps_tal) / 5
+    if st.button("🗑️ Ta bort bolag"):
+        delete_company(row[0])
+        st.success("Bolag borttaget.")
+        st.session_state["refresh"] = True
 
-            potentiell_kurs_idag = oms_år / aktier * genomsnitt_ps
-            potentiell_kurs_slutåret = oms_nästa / aktier * genomsnitt_ps
-
-            övervärdering_idag = (potentiell_kurs_idag - nuvarande_kurs) / nuvarande_kurs * 100 if nuvarande_kurs else 0
-            övervärdering_slutåret = (potentiell_kurs_slutåret - nuvarande_kurs) / nuvarande_kurs * 100 if nuvarande_kurs else 0
-
-            st.write(f"**Potentiell kurs idag:** {potentiell_kurs_idag:.2f} ({övervärdering_idag:+.1f} %)")
-            st.write(f"**Potentiell kurs i slutet av året:** {potentiell_kurs_slutåret:.2f} ({övervärdering_slutåret:+.1f} %)")
-
-            with st.form(f"edit_form_{index}"):
-                ny_kurs = st.number_input("Nuvarande kurs", value=nuvarande_kurs, format="%.2f", key=f"kurs_{index}")
-                ny_oms_år = st.number_input("Omsättning i år", value=oms_år, format="%.0f", key=f"omsår_{index}")
-                ny_oms_nästa = st.number_input("Omsättning nästa år", value=oms_nästa, format="%.0f", key=f"omsnästa_{index}")
-                ny_aktier = st.number_input("Antal aktier", value=aktier, format="%.0f", key=f"aktier_{index}")
-                ny_ps1 = st.number_input("P/S 1", value=ps_tal[0], format="%.2f", key=f"ps1_{index}")
-                ny_ps2 = st.number_input("P/S 2", value=ps_tal[1], format="%.2f", key=f"ps2_{index}")
-                ny_ps3 = st.number_input("P/S 3", value=ps_tal[2], format="%.2f", key=f"ps3_{index}")
-                ny_ps4 = st.number_input("P/S 4", value=ps_tal[3], format="%.2f", key=f"ps4_{index}")
-                ny_ps5 = st.number_input("P/S 5", value=ps_tal[4], format="%.2f", key=f"ps5_{index}")
-                spara = st.form_submit_button("Spara ändringar")
-
-                if spara:
-                    update_company(
-                        company[0],
-                        ny_kurs,
-                        ny_oms_år,
-                        ny_oms_nästa,
-                        ny_aktier,
-                        ny_ps1,
-                        ny_ps2,
-                        ny_ps3,
-                        ny_ps4,
-                        ny_ps5,
-                    )
-                    st.success("Uppdaterat!")
-                    st.session_state.data_changed = True
-
-            if st.button("❌ Ta bort", key=f"delete_{index}"):
-                delete_company(company[0])
-                st.warning(f"{company[1]} borttaget.")
-                st.session_state.data_changed = True
+# Tvinga uppdatering om ändringar skett
+if st.session_state.get("refresh"):
+    st.session_state["refresh"] = False
+    st.experimental_rerun()
