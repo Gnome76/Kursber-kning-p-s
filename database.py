@@ -1,26 +1,27 @@
 import sqlite3
 import os
 
-DB_PATH = "data/database.db"
+DB_PATH = "/mnt/data/database.db"
 
 def init_db():
-    if not os.path.exists("data"):
-        os.makedirs("data")
+    # Se till att mappen finns (Streamlit Cloud har /mnt/data som standard, men säkert)
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS bolag (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            namn TEXT,
-            kurs REAL,
-            oms1 REAL,
-            oms2 REAL,
-            aktier REAL,
-            ps1 REAL,
-            ps2 REAL,
-            ps3 REAL,
-            ps4 REAL,
-            ps5 REAL
+            namn TEXT NOT NULL,
+            kurs REAL NOT NULL,
+            oms1 REAL NOT NULL,
+            oms2 REAL NOT NULL,
+            aktier REAL NOT NULL,
+            ps1 REAL NOT NULL,
+            ps2 REAL NOT NULL,
+            ps3 REAL NOT NULL,
+            ps4 REAL NOT NULL,
+            ps5 REAL NOT NULL
         )
     """)
     conn.commit()
@@ -33,9 +34,10 @@ def update_bolag(bolag_id, namn, kurs, oms1, oms2, aktier, ps):
     conn = get_connection()
     c = conn.cursor()
     c.execute("""
-        UPDATE bolag
-        SET namn=?, kurs=?, oms1=?, oms2=?, aktier=?, ps1=?, ps2=?, ps3=?, ps4=?, ps5=?
-        WHERE id=?
+        UPDATE bolag SET
+            namn = ?, kurs = ?, oms1 = ?, oms2 = ?, aktier = ?,
+            ps1 = ?, ps2 = ?, ps3 = ?, ps4 = ?, ps5 = ?
+        WHERE id = ?
     """, (namn, kurs, oms1, oms2, aktier, *ps, bolag_id))
     conn.commit()
     conn.close()
