@@ -1,2 +1,28 @@
-data/database.db
+# Python-filer
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Miljöfiler
+.env
+.venv/
+venv/
+
+# IDE/editor-filer
+.vscode/
+.idea/
+
+# Operativsystem-specifika filer
+.DS_Store
+Thumbs.db
+
+# Streamlit session state
+.streamlit/
+
+# Databasfilen på lokal maskin (ej relevant på Streamlit Cloud men bra skydd)
+database.db
+
+# Viktigt! Behåll mappen data/ men ignorera allt innehåll – utom .keep-filen
+mnt/data/*
+!mnt/data/.keep
