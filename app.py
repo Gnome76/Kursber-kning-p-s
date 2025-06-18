@@ -1,3 +1,7 @@
+import os
+st.write("Nuvarande arbetskatalog:", os.getcwd())
+st.write("Innehåll i /mnt:", os.listdir("/mnt"))
+st.write("Finns /mnt/data?:", os.path.exists("/mnt/data"))
 import streamlit as st
 from database import initiera_databas, lägg_till_bolag, hämta_alla_bolag, uppdatera_bolag, ta_bort_bolag
 
