@@ -1,6 +1,2 @@
-# Python cache
+data/database.db
 __pycache__/
-*.pyc
-
-# SQLite databas
-/mnt/data/database.db
