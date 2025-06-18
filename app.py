@@ -3,25 +3,11 @@ from database import init_db, get_connection, update_bolag, DB_PATH
 import pandas as pd
 import os
 
-# Initiera DB och visa debug-info
+# Initiera databasen
 init_db()
-st.write("📁 Lagrar data i:", DB_PATH)
-st.write("📂 Finns databasfil:", os.path.exists(DB_PATH))
 
 st.set_page_config(layout="wide")
-st.title("📊 Aktieanalys – Bläddring & persistent data")
-
-def calculate_df(rows):
-    df = pd.DataFrame(rows, columns=[
-        "ID", "Bolag", "Kurs", "Omsättning år 1", "Omsättning år 2",
-        "Aktier", "P/S 1", "P/S 2", "P/S 3", "P/S 4", "P/S 5"
-    ])
-    df["P/S snitt"] = df[[f"P/S {i}" for i in range(1, 6)]].mean(axis=1)
-    df["Pot_kurs_idag"] = (df["Omsättning år 1"] / df["Aktier"]) * df["P/S snitt"]
-    df["Pot_kurs_slut_aret"] = (df["Omsättning år 2"] / df["Aktier"]) * df["P/S snitt"]
-    df["pct_vs_idag_pot_idag"] = (df["Pot_kurs_idag"] / df["Kurs"] - 1) * 100
-    df["pct_vs_idag_pot_slut_aret"] = (df["Pot_kurs_slut_aret"] / df["Kurs"] - 1) * 100
-    return df
+st.title("📊 Aktieanalys – Bläddra bolag")
 
 # Lägg till nytt bolag
 with st.expander("➕ Lägg till nytt bolag", expanded=True):
@@ -47,78 +33,71 @@ with st.expander("➕ Lägg till nytt bolag", expanded=True):
             else:
                 st.warning("Bolagsnamn krävs!")
 
-# Hämta data och visa
+# Läs in bolagsdata
 conn = get_connection()
 rows = conn.execute("SELECT * FROM bolag").fetchall()
 conn.close()
 
+# Om bolag finns
 if rows:
-    df = calculate_df(rows)
-    df = df.sort_values("pct_vs_idag_pot_slut_aret", ascending=False).reset_index(drop=True)
+    df = pd.DataFrame(rows, columns=[
+        "ID", "Bolag", "Kurs", "Omsättning i år", "Omsättning nästa år",
+        "Aktier", "P/S 1", "P/S 2", "P/S 3", "P/S 4", "P/S 5"
+    ])
+
+    # Beräkningar
+    df["P/S snitt"] = df[[f"P/S {i}" for i in range(1, 6)]].mean(axis=1)
+    df["Pot kurs idag"] = (df["Omsättning i år"] / df["Aktier"]) * df["P/S snitt"]
+    df["Pot kurs slut året"] = (df["Omsättning nästa år"] / df["Aktier"]) * df["P/S snitt"]
+    df["% under/över idag"] = (df["Pot kurs idag"] / df["Kurs"] - 1) * 100
+    df["% under/över slut året"] = (df["Pot kurs slut året"] / df["Kurs"] - 1) * 100
+
+    df = df.sort_values("% under/över slut året", ascending=False).reset_index(drop=True)
 
     if "index" not in st.session_state:
         st.session_state.index = 0
 
-    def prev_bolag():
+    def prev():
         if st.session_state.index > 0:
             st.session_state.index -= 1
 
-    def next_bolag():
+    def next():
         if st.session_state.index < len(df) - 1:
             st.session_state.index += 1
 
-    cols_nav = st.columns([1,6,1])
-    with cols_nav[0]:
-        st.button("⬅️ Föregående", on_click=prev_bolag)
-    with cols_nav[2]:
-        st.button("Nästa ➡️", on_click=next_bolag)
+    st.markdown("### 📂 Bläddra mellan bolag")
+    cols = st.columns([1, 6, 1])
+    with cols[0]: st.button("⬅️ Föregående", on_click=prev)
+    with cols[2]: st.button("Nästa ➡️", on_click=next)
 
-    i = st.session_state.index
-    row = df.iloc[i]
+    row = df.iloc[st.session_state.index]
+    st.subheader(f"{row['Bolag']} ({st.session_state.index + 1} av {len(df)})")
 
-    st.markdown(f"### {row['Bolag']} ({i+1} av {len(df)})")
-    st.write(f"**Nuvarande kurs:** {row['Kurs']:.2f} kr")
-
-    def color_val(val):
-        if val > 0: return 'color: green; font-weight: bold;'
-        elif val < 0: return 'color: red; font-weight: bold;'
-        return ''
-
-    st.markdown(f"**Potentiell kurs idag:** {row['Pot_kurs_idag']:.2f} kr")
-    st.markdown(f"**+/- idag:** "
-                f"<span style='{color_val(row['pct_vs_idag_pot_idag'])}'>{row['pct_vs_idag_pot_idag']:+.1f}%</span>",
-                unsafe_allow_html=True)
-
-    st.markdown(f"**Potentiell slutårs-kurs:** {row['Pot_kurs_slut_aret']:.2f} kr")
-    st.markdown(f"**+/- slut året:** "
-                f"<span style='{color_val(row['pct_vs_idag_pot_slut_aret'])}'>{row['pct_vs_idag_pot_slut_aret']:+.1f}%</span>",
-                unsafe_allow_html=True)
+    st.metric("Nuvarande kurs", f"{row['Kurs']:.2f} kr")
+    st.metric("Potentiell kurs idag", f"{row['Pot kurs idag']:.2f} kr", delta=f"{row['% under/över idag']:.1f} %")
+    st.metric("Potentiell kurs slut året", f"{row['Pot kurs slut året']:.2f} kr", delta=f"{row['% under/över slut året']:.1f} %")
 
     st.markdown("---")
     st.subheader("✏️ Redigera bolag")
 
     with st.form(f"edit_form_{row['ID']}"):
-        cols1, cols2 = st.columns(2)
-        with cols1:
-            namn = st.text_input("Bolag", value=row["Bolag"])
-            kurs = st.number_input("Nuvarande kurs", value=row["Kurs"], step=0.01)
-            oms1 = st.number_input("Omsättning i år (Mkr)", value=row["Omsättning år 1"], step=0.1)
-            oms2 = st.number_input("Omsättning nästa år (Mkr)", value=row["Omsättning år 2"], step=0.1)
-            aktier = st.number_input("Antal utestående aktier (miljoner)", value=row["Aktier"], step=0.01)
-        with cols2:
-            ps = [st.number_input(f"P/S {i}", value=row[f"P/S {i}"], step=0.1) for i in range(1, 6)]
+        namn = st.text_input("Bolag", value=row["Bolag"])
+        kurs = st.number_input("Nuvarande kurs", value=row["Kurs"], step=0.01)
+        oms1 = st.number_input("Omsättning i år (Mkr)", value=row["Omsättning i år"], step=0.1)
+        oms2 = st.number_input("Omsättning nästa år (Mkr)", value=row["Omsättning nästa år"], step=0.1)
+        aktier = st.number_input("Antal utestående aktier (miljoner)", value=row["Aktier"], step=0.01)
+        ps = [st.number_input(f"P/S {i}", value=row[f"P/S {i}"], step=0.1) for i in range(1, 6)]
 
-        btn_save = st.form_submit_button("Spara ändringar")
-        if btn_save:
+        save = st.form_submit_button("Spara ändringar")
+        if save:
             update_bolag(row["ID"], namn, kurs, oms1, oms2, aktier, ps)
-            st.success(f"{namn} sparad – ladda om sidan.")
+            st.success("Uppdaterat! Ladda om sidan.")
 
-    st.markdown("---")
-    if st.button("Radera bolag"):
+    if st.button("🗑️ Radera bolag"):
         conn = get_connection()
         conn.execute("DELETE FROM bolag WHERE id = ?", (row["ID"],))
         conn.commit()
         conn.close()
-        st.success(f"{row['Bolag']} raderat – ladda om sidan.")
+        st.success("Bolaget raderades – ladda om sidan.")
 else:
-    st.info("Inga bolag inlagda ännu.")
+    st.info("Inga bolag har lagts till ännu.")
