@@ -1,14 +1,18 @@
+# Ignorera SQLite-databasfiler
+*.db
+
+# __pycache__-mappar
 __pycache__/
+
+# Python-kompilerade filer
 *.pyc
-*.pyo
-*.pyd
-.env
-.venv
-env/
-venv/
-.mypy_cache/
-.pytest_cache/
-.pyre/
-.mnt/
-.mnt/data/database.db
-data/database.db
+
+# Streamlit config-cache
+.streamlit/
+
+# Dold fil som används för att hålla kvar data-mappen
+data/.keep
+
+# Data som inte ska spåras men krävs för persistent lagring
+mnt/data/database.db
+mnt/data/.keep
