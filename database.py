@@ -1,35 +1,46 @@
 import os
 import sqlite3
 
-# Använd rätt sökväg för permanent datalagring i Streamlit Cloud
-DATA_MAPP = "/mnt/data"
+# Kontrollera om vi kör i Streamlit Cloud (en miljövariabel som finns där)
+I_STREAMLIT_CLOUD = "STREAMLIT_SERVER_RUN_ID" in os.environ
+
+if I_STREAMLIT_CLOUD:
+    DATA_MAPP = "/mnt/data"
+else:
+    # Lokalt kan du använda en relativ mapp "mnt/data"
+    DATA_MAPP = "mnt/data"
+
 DB_SOKVAG = os.path.join(DATA_MAPP, "database.db")
 
-def initiera_databas():
-    # Skapa mappen om den inte finns (sker normalt automatiskt, men vi säkrar upp)
-    if not os.path.exists(DATA_MAPP):
-        os.makedirs(DATA_MAPP, exist_ok=True)
 
-    # Skapa databas och tabell om de inte finns
-    conn = sqlite3.connect(DB_SOKVAG)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS bolag (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            bolagsnamn TEXT NOT NULL,
-            nuvarande_kurs REAL NOT NULL,
-            omsättning_i_år REAL NOT NULL,
-            omsättning_nästa_år REAL NOT NULL,
-            antal_aktier INTEGER NOT NULL,
-            ps1 REAL NOT NULL,
-            ps2 REAL NOT NULL,
-            ps3 REAL NOT NULL,
-            ps4 REAL NOT NULL,
-            ps5 REAL NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+def initiera_databas():
+    # Skapa lokal mapp om den inte finns (endast om ej Streamlit Cloud)
+    if not I_STREAMLIT_CLOUD:
+        if not os.path.exists(DATA_MAPP):
+            os.makedirs(DATA_MAPP, exist_ok=True)
+
+    # Skapa databas och tabell endast om DB-filen inte finns
+    if not os.path.exists(DB_SOKVAG):
+        conn = sqlite3.connect(DB_SOKVAG)
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS bolag (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                bolagsnamn TEXT NOT NULL,
+                nuvarande_kurs REAL NOT NULL,
+                omsättning_i_år REAL NOT NULL,
+                omsättning_nästa_år REAL NOT NULL,
+                antal_aktier INTEGER NOT NULL,
+                ps1 REAL NOT NULL,
+                ps2 REAL NOT NULL,
+                ps3 REAL NOT NULL,
+                ps4 REAL NOT NULL,
+                ps5 REAL NOT NULL
+            )
+        ''')
+        conn.commit()
+        conn.close()
+
 
 def lägg_till_bolag(bolagsnamn, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_SOKVAG)
@@ -48,6 +59,7 @@ def lägg_till_bolag(bolagsnamn, nuvarande_kurs, omsättning_i_år, omsättning_
     conn.commit()
     conn.close()
 
+
 def hämta_alla_bolag():
     conn = sqlite3.connect(DB_SOKVAG)
     c = conn.cursor()
@@ -55,6 +67,7 @@ def hämta_alla_bolag():
     bolag_lista = c.fetchall()
     conn.close()
     return bolag_lista
+
 
 def uppdatera_bolag(id, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_SOKVAG)
@@ -74,6 +87,7 @@ def uppdatera_bolag(id, nuvarande_kurs, omsättning_i_år, omsättning_nästa_å
     ''', (nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5, id))
     conn.commit()
     conn.close()
+
 
 def ta_bort_bolag(id):
     conn = sqlite3.connect(DB_SOKVAG)
