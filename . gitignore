@@ -1,5 +1,0 @@
-__pycache__/
-*.pyc
-.mypy_cache/
-.env
-data/database.db
