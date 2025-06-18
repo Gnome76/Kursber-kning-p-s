@@ -1,2 +1,6 @@
-/mnt/data/*
-!/mnt/data/.keep
+# Python cache
+__pycache__/
+*.pyc
+
+# SQLite databas
+/mnt/data/database.db
