@@ -1,11 +1,10 @@
 import os
 import sqlite3
 
-DATA_MAPP = "data"
+DATA_MAPP = "/mnt/data"
 DB_SOKVAG = os.path.join(DATA_MAPP, "database.db")
 
 def initiera_databas():
-    # Skapa data-mapp om den inte finns
     if not os.path.exists(DATA_MAPP):
         os.makedirs(DATA_MAPP)
 
@@ -43,9 +42,9 @@ def hämta_alla_bolag():
     conn = sqlite3.connect(DB_SOKVAG)
     c = conn.cursor()
     c.execute('SELECT * FROM bolag')
-    bolag_lista = c.fetchall()
+    resultat = c.fetchall()
     conn.close()
-    return bolag_lista
+    return resultat
 
 def uppdatera_bolag(id, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_SOKVAG)
