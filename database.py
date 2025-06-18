@@ -5,18 +5,17 @@ DATA_DIR = "data"
 DB_PATH = os.path.join(DATA_DIR, "database.db")
 
 def init_db():
-    if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
+    c = conn.cursor()
+    c.execute('''
         CREATE TABLE IF NOT EXISTS companies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            bolag TEXT,
-            nuvarande_kurs REAL,
-            omsättning_år REAL,
-            omsättning_nästa_år REAL,
-            antal_aktier INTEGER,
+            name TEXT,
+            price REAL,
+            revenue_this_year REAL,
+            revenue_next_year REAL,
+            shares_outstanding REAL,
             ps1 REAL,
             ps2 REAL,
             ps3 REAL,
@@ -27,36 +26,38 @@ def init_db():
     conn.commit()
     conn.close()
 
-def insert_company(data):
+def insert_company(name, price, rev_now, rev_next, shares, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO companies (
-            bolag, nuvarande_kurs, omsättning_år, omsättning_nästa_år,
-            antal_aktier, ps1, ps2, ps3, ps4, ps5
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', data)
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO companies (name, price, revenue_this_year, revenue_next_year, shares_outstanding, ps1, ps2, ps3, ps4, ps5)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (name, price, rev_now, rev_next, shares, ps1, ps2, ps3, ps4, ps5))
     conn.commit()
     conn.close()
 
 def get_all_companies():
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM companies')
-    rows = cursor.fetchall()
+    c = conn.cursor()
+    c.execute('SELECT * FROM companies')
+    result = c.fetchall()
     conn.close()
-    return rows
+    return result
 
-def update_company(company_id, field, value):
+def update_company(id, price, rev_now, rev_next, shares, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(f'UPDATE companies SET {field} = ? WHERE id = ?', (value, company_id))
+    c = conn.cursor()
+    c.execute('''
+        UPDATE companies
+        SET price=?, revenue_this_year=?, revenue_next_year=?, shares_outstanding=?, ps1=?, ps2=?, ps3=?, ps4=?, ps5=?
+        WHERE id=?
+    ''', (price, rev_now, rev_next, shares, ps1, ps2, ps3, ps4, ps5, id))
     conn.commit()
     conn.close()
 
-def delete_company(company_id):
+def delete_company(id):
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM companies WHERE id = ?', (company_id,))
+    c = conn.cursor()
+    c.execute('DELETE FROM companies WHERE id=?', (id,))
     conn.commit()
     conn.close()
