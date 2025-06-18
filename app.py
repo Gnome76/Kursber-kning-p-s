@@ -1,106 +1,83 @@
 import streamlit as st
-from database import init_db, insert_company, get_all_companies, update_company, delete_company
-import numpy as np
+from database import (
+    init_db, insert_company, get_all_companies,
+    update_company, delete_company
+)
 
-# Initiera databasen
 init_db()
+st.set_page_config(page_title="Aktieanalys", layout="centered")
 
-st.title("Enkel Aktieanalys")
+st.title("📈 Enkel Aktieanalys")
 
-# Ladda bolagsdata från db
+# Formulär för att lägga till bolag
+with st.expander("➕ Lägg till nytt bolag"):
+    with st.form("add_company_form"):
+        name = st.text_input("Bolagsnamn")
+        current_price = st.number_input("Nuvarande kurs", min_value=0.0, format="%.2f")
+        revenue_this_year = st.number_input("Förväntad omsättning i år", min_value=0.0, format="%.0f")
+        revenue_next_year = st.number_input("Förväntad omsättning nästa år", min_value=0.0, format="%.0f")
+        shares_outstanding = st.number_input("Antal utestående aktier", min_value=1.0, format="%.0f")
+        ps1 = st.number_input("P/S 1", min_value=0.0)
+        ps2 = st.number_input("P/S 2", min_value=0.0)
+        ps3 = st.number_input("P/S 3", min_value=0.0)
+        ps4 = st.number_input("P/S 4", min_value=0.0)
+        ps5 = st.number_input("P/S 5", min_value=0.0)
+
+        submitted = st.form_submit_button("Lägg till bolag")
+        if submitted and name:
+            insert_company(name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, ps1, ps2, ps3, ps4, ps5)
+            st.success(f"{name} har lagts till!")
+
+# Hämta och sortera bolag
 companies = get_all_companies()
 
-if not companies:
-    st.info("Inga bolag i databasen, vänligen lägg till.")
+def calc_values(company):
+    avg_ps = sum(company['ps']) / 5
+    pot_price_now = (company['rev_this'] / company['shares']) * avg_ps
+    pot_price_future = (company['rev_next'] / company['shares']) * avg_ps
+    under_over_now = ((pot_price_now - company['price']) / company['price']) * 100 if company['price'] else 0
+    under_over_future = ((pot_price_future - company['price']) / company['price']) * 100 if company['price'] else 0
+    return pot_price_now, pot_price_future, under_over_now, under_over_future
 
-# Hjälpfunktion
-def calculate(company):
-    _, name, current_price, rev_this_year, rev_next_year, shares_out, ps1, ps2, ps3, ps4, ps5 = company
-    ps_values = [ps1, ps2, ps3, ps4, ps5]
-    ps_avg = np.mean(ps_values)
-    pot_kurs_idag = (rev_this_year / shares_out) * ps_avg if shares_out else 0
-    pot_kurs_slut_året = (rev_next_year / shares_out) * ps_avg if shares_out else 0
-    undervärdering = ((pot_kurs_slut_året - current_price) / current_price * 100) if current_price else 0
-    return pot_kurs_idag, pot_kurs_slut_året, undervärdering
+# Sortera efter mest undervärderad i framtiden
+companies = sorted(
+    companies,
+    key=lambda c: calc_values(c)[3],
+    reverse=True
+)
 
-# Beräkna och sortera
-companies_calc = []
-for comp in companies:
-    pot_idag, pot_år, underv = calculate(comp)
-    companies_calc.append((comp, pot_idag, pot_år, underv))
+# Visa ett bolag i taget
+index = st.number_input("Bläddra mellan bolag", 0, len(companies)-1 if companies else 0, 0)
+if companies:
+    c = companies[index]
+    pot_now, pot_future, under_now, under_future = calc_values(c)
 
-companies_calc.sort(key=lambda x: x[3], reverse=True)
+    st.subheader(c['name'])
+    st.write(f"**Nuvarande kurs:** {c['price']:.2f} kr")
+    st.write(f"📌 **Potentiell kurs idag:** {pot_now:.2f} kr ({under_now:+.2f}%)")
+    st.write(f"📌 **Potentiell kurs vid årets slut:** {pot_future:.2f} kr ({under_future:+.2f}%)")
 
-# Navigering
-if "idx" not in st.session_state:
-    st.session_state.idx = 0
+    # Redigerbart formulär
+    with st.expander("✏️ Redigera bolag"):
+        with st.form(f"edit_{c['id']}"):
+            new_price = st.number_input("Ny nuvarande kurs", value=c['price'], format="%.2f")
+            new_rev_this = st.number_input("Ny omsättning i år", value=c['rev_this'], format="%.0f")
+            new_rev_next = st.number_input("Ny omsättning nästa år", value=c['rev_next'], format="%.0f")
+            new_shares = st.number_input("Nytt antal aktier", value=c['shares'], format="%.0f")
+            new_ps1 = st.number_input("P/S 1", value=c['ps'][0])
+            new_ps2 = st.number_input("P/S 2", value=c['ps'][1])
+            new_ps3 = st.number_input("P/S 3", value=c['ps'][2])
+            new_ps4 = st.number_input("P/S 4", value=c['ps'][3])
+            new_ps5 = st.number_input("P/S 5", value=c['ps'][4])
+            updated = st.form_submit_button("Uppdatera")
+            if updated:
+                update_company(c['id'], new_price, new_rev_this, new_rev_next, new_shares, new_ps1, new_ps2, new_ps3, new_ps4, new_ps5)
+                st.experimental_rerun()
 
-col1, col2, col3 = st.columns([1, 3, 1])
-with col1:
-    if st.button("⬅️ Föregående"):
-        st.session_state.idx = max(st.session_state.idx - 1, 0)
-with col3:
-    if st.button("Nästa ➡️"):
-        st.session_state.idx = min(st.session_state.idx + 1, len(companies_calc) - 1)
-
-if companies_calc:
-    comp, pot_idag, pot_år, underv = companies_calc[st.session_state.idx]
-    id, name, current_price, rev_this_year, rev_next_year, shares_out, ps1, ps2, ps3, ps4, ps5 = comp
-
-    st.subheader(f"Bolag: {name}")
-
-    with st.form("edit_form", clear_on_submit=False):
-        new_name = st.text_input("Bolag", value=name)
-        new_current_price = st.number_input("Nuvarande kurs", value=float(current_price), format="%.4f", step=0.01)
-        new_rev_this_year = st.number_input("Förväntad omsättning i år", value=float(rev_this_year), format="%.2f", step=0.01)
-        new_rev_next_year = st.number_input("Förväntad omsättning nästa år", value=float(rev_next_year), format="%.2f", step=0.01)
-        new_shares_out = st.number_input("Antal utestående aktier", value=float(shares_out), format="%.0f", step=1.0)
-        new_ps1 = st.number_input("P/S 1", value=float(ps1), format="%.2f", step=0.01)
-        new_ps2 = st.number_input("P/S 2", value=float(ps2), format="%.2f", step=0.01)
-        new_ps3 = st.number_input("P/S 3", value=float(ps3), format="%.2f", step=0.01)
-        new_ps4 = st.number_input("P/S 4", value=float(ps4), format="%.2f", step=0.01)
-        new_ps5 = st.number_input("P/S 5", value=float(ps5), format="%.2f", step=0.01)
-
-        submitted = st.form_submit_button("Uppdatera bolag")
-        if submitted:
-            update_company(id, new_name, new_current_price, new_rev_this_year, new_rev_next_year, new_shares_out, new_ps1, new_ps2, new_ps3, new_ps4, new_ps5)
-            st.success("Bolag uppdaterat!")
-            st.rerun()
-
-    if st.button("Ta bort bolag"):
-        delete_company(id)
-        st.success("Bolag borttaget!")
-        if st.session_state.idx > 0:
-            st.session_state.idx -= 1
-        st.rerun()
-
-    st.markdown("---")
-    st.markdown(f"**Potentiell kurs idag:** {pot_idag:.2f} SEK")
-    st.markdown(f"**Potentiell kurs i slutet av året:** {pot_år:.2f} SEK")
-    st.markdown(f"**Under-/övervärdering (i %):** {underv:.2f} %")
+    # Ta bort
+    if st.button("🗑️ Ta bort bolag", key=f"delete_{c['id']}"):
+        delete_company(c['id'])
+        st.success("Bolaget har tagits bort.")
+        st.experimental_rerun()
 else:
-    st.info("Inga bolag att visa.")
-
-st.markdown("---")
-st.header("Lägg till nytt bolag")
-
-with st.form("add_form", clear_on_submit=True):
-    name = st.text_input("Bolag")
-    current_price = st.number_input("Nuvarande kurs", format="%.4f", step=0.01)
-    revenue_this_year = st.number_input("Förväntad omsättning i år", format="%.2f", step=0.01)
-    revenue_next_year = st.number_input("Förväntad omsättning nästa år", format="%.2f", step=0.01)
-    shares_outstanding = st.number_input("Antal utestående aktier", format="%.0f", step=1.0)
-    ps1 = st.number_input("P/S 1", format="%.2f", step=0.01)
-    ps2 = st.number_input("P/S 2", format="%.2f", step=0.01)
-    ps3 = st.number_input("P/S 3", format="%.2f", step=0.01)
-    ps4 = st.number_input("P/S 4", format="%.2f", step=0.01)
-    ps5 = st.number_input("P/S 5", format="%.2f", step=0.01)
-
-    submitted = st.form_submit_button("Lägg till bolag")
-    if submitted:
-        try:
-            insert_company(name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, ps1, ps2, ps3, ps4, ps5)
-            st.success("Bolag tillagt!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Något gick fel: {e}")
+    st.info("Inga bolag tillagda ännu.")
