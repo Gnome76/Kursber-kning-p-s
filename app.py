@@ -2,7 +2,6 @@ import streamlit as st
 from database import init_db, get_connection, update_bolag
 import pandas as pd
 
-# Initiera databas
 init_db()
 
 st.set_page_config(layout="wide")
@@ -15,11 +14,11 @@ def calculate_df(rows):
     ])
     df["P/S snitt"] = df[[f"P/S {i}" for i in range(1, 6)]].mean(axis=1)
 
-    df["Pot. kurs idag"] = (df["Omsättning år 1"] / df["Aktier"]) * df["P/S snitt"]
-    df["Pot. kurs slut året"] = (df["Omsättning år 2"] / df["Aktier"]) * df["P/S snitt"]
+    df["Pot_kurs_idag"] = (df["Omsättning år 1"] / df["Aktier"]) * df["P/S snitt"]
+    df["Pot_kurs_slut_aret"] = (df["Omsättning år 2"] / df["Aktier"]) * df["P/S snitt"]
 
-    df["% vs idag - pot kurs idag"] = (df["Pot. kurs idag"] / df["Kurs"] - 1) * 100
-    df["% vs idag - pot kurs slut året"] = (df["Pot. kurs slut året"] / df["Kurs"] - 1) * 100
+    df["pct_vs_idag_pot_idag"] = (df["Pot_kurs_idag"] / df["Kurs"] - 1) * 100
+    df["pct_vs_idag_pot_slut_aret"] = (df["Pot_kurs_slut_aret"] / df["Kurs"] - 1) * 100
 
     return df
 
@@ -54,10 +53,12 @@ conn.close()
 
 if rows:
     df = calculate_df(rows)
-    # Sortera efter mest undervärderad enligt framtida potentiell kurs (mest negativ % först)
-    df = df.sort_values("% vs idag - pot kurs slut året", ascending=True).reset_index(drop=True)
+    # Sortera efter mest undervärderad (mest negativ % först)
+    df = df.sort_values("pct_vs_idag_pot_slut_aret", ascending=True).reset_index(drop=True)
 
-    # Session state för index
+    # Visa debug-tabell med sorterade värden (kan tas bort senare)
+    st.dataframe(df[["Bolag", "Kurs", "Pot_kurs_slut_aret", "pct_vs_idag_pot_slut_aret"]])
+
     if "index" not in st.session_state:
         st.session_state.index = 0
 
@@ -88,14 +89,14 @@ if rows:
             return 'color: red; font-weight: bold;'
         return ''
 
-    st.markdown(f"**Potentiell kurs idag:** {row['Pot. kurs idag']:.2f} kr")
+    st.markdown(f"**Potentiell kurs idag:** {row['Pot_kurs_idag']:.2f} kr")
     st.markdown(f"**Över-/undervärdering idag:** "
-                f"<span style='{color_val(row['% vs idag - pot kurs idag'])}'>{row['% vs idag - pot kurs idag']:+.1f}%</span>",
+                f"<span style='{color_val(row['pct_vs_idag_pot_idag'])}'>{row['pct_vs_idag_pot_idag']:+.1f}%</span>",
                 unsafe_allow_html=True)
 
-    st.markdown(f"**Potentiell kurs i slutet av året:** {row['Pot. kurs slut året']:.2f} kr")
+    st.markdown(f"**Potentiell kurs i slutet av året:** {row['Pot_kurs_slut_aret']:.2f} kr")
     st.markdown(f"**Över-/undervärdering slut året:** "
-                f"<span style='{color_val(row['% vs idag - pot kurs slut året'])}'>{row['% vs idag - pot kurs slut året']:+.1f}%</span>",
+                f"<span style='{color_val(row['pct_vs_idag_pot_slut_aret'])}'>{row['pct_vs_idag_pot_slut_aret']:+.1f}%</span>",
                 unsafe_allow_html=True)
 
     st.markdown("---")
