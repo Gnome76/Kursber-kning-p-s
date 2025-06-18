@@ -1,11 +1,13 @@
-# Ignorera databasen så den inte versioneras
-/data/database.db
-
-# Ignorera pycache och andra temporära filer
+# Python
 __pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.db-journal
-*.log
+*.pyc
+
+# Streamlit cache
+.streamlit/
+
+# SQLite-databas
+data/database.db
+
+# Miljöfiler
 .env
+*.env
