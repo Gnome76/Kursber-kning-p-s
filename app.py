@@ -5,7 +5,6 @@ import numpy as np
 # Initiera databas
 init_db()
 
-# Session state för att tvinga omrendering
 if 'refresh' not in st.session_state:
     st.session_state['refresh'] = False
 
@@ -18,7 +17,6 @@ def berakna_potentiell_kurs(omsattning, antal_aktier, ps_varden):
 
 st.title("Enkel Aktieanalysapp")
 
-# Formulär för att lägga till bolag
 with st.form("lagg_till_bolag"):
     bolag = st.text_input("Bolag")
     nuvarande_kurs = st.number_input("Nuvarande kurs", min_value=0.0, format="%.2f")
@@ -48,7 +46,6 @@ if lagg_till:
         st.success(f"{bolag} har lagts till.")
         tvinga_uppdatering()
 
-# Hämta och sortera bolag utifrån mest undervärderad (potentiell kurs i slutet av året vs nuvarande kurs)
 bolag_lista = hamta_alla_bolag()
 
 for bolag_info in bolag_lista:
@@ -70,10 +67,8 @@ for bolag_info in bolag_lista:
         "undervardering_arskiftet": undervardering_arskiftet
     })
 
-# Sortera bolag: mest undervärderad först baserat på potentiell kurs i slutet av året
 bolag_lista.sort(key=lambda b: b["undervardering_arskiftet"], reverse=True)
 
-# Visa bolag ett och ett med bläddring
 if "index" not in st.session_state:
     st.session_state.index = 0
 
@@ -86,7 +81,6 @@ def visa_bolag(index):
     st.write(f"Under-/Övervärdering idag: {bolag_info['undervardering_idag']:.2f} %")
     st.write(f"Under-/Övervärdering i slutet av året: {bolag_info['undervardering_arskiftet']:.2f} %")
 
-    # Editera bolag - enkel inline edit
     with st.expander("Redigera bolag"):
         ny_nuvarande_kurs = st.number_input("Nuvarande kurs", value=bolag_info['nuvarande_kurs'], format="%.2f", key=f"edit_nuvarande_{index}")
         ny_omsattning_i_ar = st.number_input("Förväntad omsättning i år (MSEK)", value=bolag_info['omsattning_i_ar'], format="%.2f", key=f"edit_omsattning_i_ar_{index}")
@@ -114,15 +108,12 @@ def visa_bolag(index):
     if st.button("Ta bort bolag", key=f"ta_bort_{index}"):
         ta_bort_bolag(bolag_info["id"])
         st.success(f"Bolag {bolag_info['bolag']} borttaget.")
-        # Uppdatera index om sista bolaget tas bort
         if st.session_state.index >= len(bolag_lista) - 1:
             st.session_state.index = max(0, len(bolag_lista) - 2)
         tvinga_uppdatering()
 
 if bolag_lista:
     visa_bolag(st.session_state.index)
-
-    # Bläddringsknappar
     col1, col2, col3 = st.columns([1,4,1])
     with col1:
         if st.button("⬅️ Föregående") and st.session_state.index > 0:
