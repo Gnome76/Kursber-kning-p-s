@@ -6,7 +6,7 @@ import pandas as pd
 init_db()
 
 st.set_page_config(layout="wide")
-st.title("📊 Aktieanalys – Överskådlig presentation")
+st.title("📊 Aktieanalys – Visa bolag ett och ett")
 
 def calculate_df(rows):
     df = pd.DataFrame(rows, columns=[
@@ -55,16 +55,32 @@ conn.close()
 if rows:
     df = calculate_df(rows)
     # Sortera efter mest undervärderad enligt framtida potentiell kurs
-    df = df.sort_values("% vs idag - pot kurs slut året")
+    df = df.sort_values("% vs idag - pot kurs slut året").reset_index(drop=True)
 
-    # Kolumner att visa
-    display_cols = [
-        "Bolag", "Kurs",
-        "Pot. kurs idag", "% vs idag - pot kurs idag",
-        "Pot. kurs slut året", "% vs idag - pot kurs slut året"
-    ]
+    # Session state för index
+    if "index" not in st.session_state:
+        st.session_state.index = 0
 
-    # Färgmarkering för över-/undervärdering (rött/ grönt)
+    def prev_bolag():
+        if st.session_state.index > 0:
+            st.session_state.index -= 1
+
+    def next_bolag():
+        if st.session_state.index < len(df) - 1:
+            st.session_state.index += 1
+
+    cols_nav = st.columns([1,6,1])
+    with cols_nav[0]:
+        st.button("⬅️ Föregående", on_click=prev_bolag)
+    with cols_nav[2]:
+        st.button("Nästa ➡️", on_click=next_bolag)
+
+    i = st.session_state.index
+    row = df.iloc[i]
+
+    st.markdown(f"### {row['Bolag']} ({i+1} av {len(df)})")
+    st.write(f"**Nuvarande kurs:** {row['Kurs']:.2f} kr")
+
     def color_val(val):
         if val > 0:
             return 'color: green; font-weight: bold;'
@@ -72,43 +88,42 @@ if rows:
             return 'color: red; font-weight: bold;'
         return ''
 
-    st.subheader("📋 Bolag & analys (sorterat på mest undervärderad)")
+    st.markdown(f"**Potentiell kurs idag:** {row['Pot. kurs idag']:.2f} kr")
+    st.markdown(f"**Över-/undervärdering idag:** "
+                f"<span style='{color_val(row['% vs idag - pot kurs idag'])}'>{row['% vs idag - pot kurs idag']:+.1f}%</span>",
+                unsafe_allow_html=True)
 
-    styled_df = df[display_cols].style.format({
-        "Kurs": "{:.2f}",
-        "Pot. kurs idag": "{:.2f}",
-        "% vs idag - pot kurs idag": "{:+.1f}%",
-        "Pot. kurs slut året": "{:.2f}",
-        "% vs idag - pot kurs slut året": "{:+.1f}%"
-    }).applymap(color_val, subset=["% vs idag - pot kurs idag", "% vs idag - pot kurs slut året"])
+    st.markdown(f"**Potentiell kurs i slutet av året:** {row['Pot. kurs slut året']:.2f} kr")
+    st.markdown(f"**Över-/undervärdering slut året:** "
+                f"<span style='{color_val(row['% vs idag - pot kurs slut året'])}'>{row['% vs idag - pot kurs slut året']:+.1f}%</span>",
+                unsafe_allow_html=True)
 
-    st.dataframe(styled_df, use_container_width=True)
+    st.markdown("---")
+    st.subheader("✏️ Redigera bolag")
 
-    # ✏️ Redigera & ta bort bolag
-    st.subheader("✏️ Redigera / Radera bolag")
-    for _, row in df.reset_index(drop=True).iterrows():
-        with st.expander(f"{row['Bolag']} - {row['% vs idag - pot kurs slut året']:+.1f}%"):
-            cols = st.columns(2)
-            with cols[0]:
-                namn = st.text_input("Bolag", value=row["Bolag"], key=f"e_namn_{row['ID']}")
-                kurs = st.number_input("Nuvarande kurs", value=row["Kurs"], step=0.01, key=f"e_kurs_{row['ID']}")
-                oms1 = st.number_input("Omsättning i år", value=row["Omsättning år 1"], step=0.1, key=f"e_oms1_{row['ID']}")
-                oms2 = st.number_input("Omsättning nästa år", value=row["Omsättning år 2"], step=0.1, key=f"e_oms2_{row['ID']}")
-                aktier = st.number_input("Antal utestående aktier", value=row["Aktier"], step=0.01, key=f"e_akt_{row['ID']}")
-            with cols[1]:
-                ps = [st.number_input(f"P/S {i}", value=row[f"P/S {i}"], step=0.1, key=f"e_ps{i}_{row['ID']}") for i in range(1, 6)]
+    with st.form(f"edit_form_{row['ID']}"):
+        cols1, cols2 = st.columns(2)
+        with cols1:
+            namn = st.text_input("Bolag", value=row["Bolag"])
+            kurs = st.number_input("Nuvarande kurs", value=row["Kurs"], step=0.01)
+            oms1 = st.number_input("Omsättning i år (Mkr)", value=row["Omsättning år 1"], step=0.1)
+            oms2 = st.number_input("Omsättning nästa år (Mkr)", value=row["Omsättning år 2"], step=0.1)
+            aktier = st.number_input("Antal utestående aktier (miljoner)", value=row["Aktier"], step=0.01)
+        with cols2:
+            ps = [st.number_input(f"P/S {i}", value=row[f"P/S {i}"], step=0.1) for i in range(1, 6)]
 
-            btn_save = st.button("Spara ändringar", key=f"save_{row['ID']}")
-            btn_delete = st.button("Radera bolag", key=f"del_{row['ID']}")
+        btn_save = st.form_submit_button("Spara ändringar")
 
-            if btn_save:
-                update_bolag(row["ID"], namn, kurs, oms1, oms2, aktier, ps)
-                st.success(f"{namn} sparad – ladda om sidan.")
-            if btn_delete:
-                conn = get_connection()
-                conn.execute("DELETE FROM bolag WHERE id = ?", (row["ID"],))
-                conn.commit()
-                conn.close()
-                st.success(f"{row['Bolag']} raderat – ladda om sidan.")
+        if btn_save:
+            update_bolag(row["ID"], namn, kurs, oms1, oms2, aktier, ps)
+            st.success(f"{namn} sparad – ladda om sidan för uppdatering.")
+
+    st.markdown("---")
+    if st.button("Radera bolag"):
+        conn = get_connection()
+        conn.execute("DELETE FROM bolag WHERE id = ?", (row["ID"],))
+        conn.commit()
+        conn.close()
+        st.success(f"{row['Bolag']} raderat – ladda om sidan.")
 else:
     st.info("Inga bolag inlagda ännu.")
