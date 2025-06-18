@@ -1,20 +1,23 @@
-import sqlite3
 import os
+import sqlite3
 
-DATA_DIR = "/mnt/data"
+# Sätt databas-mapp i projektroten
+DATA_DIR = "data"
 DB_PATH = os.path.join(DATA_DIR, "database.db")
 
 def init_db():
+    # Skapa mappen data om den inte finns
     if not os.path.exists(DATA_DIR):
-        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(DATA_DIR)
+    # Skapa tabell om den inte finns
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS bolag (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            namn TEXT UNIQUE NOT NULL,
+            bolag TEXT NOT NULL,
             nuvarande_kurs REAL NOT NULL,
-            omsattning_ars REAL NOT NULL,
+            omsattning_i_ar REAL NOT NULL,
             omsattning_nasta_ar REAL NOT NULL,
             antal_aktier INTEGER NOT NULL,
             ps1 REAL NOT NULL,
@@ -27,29 +30,41 @@ def init_db():
     conn.commit()
     conn.close()
 
-def hamta_alla_bolag():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('SELECT * FROM bolag')
-    data = c.fetchall()
-    conn.close()
-    return data
-
-def lagg_till_bolag(namn, nuvarande_kurs, omsattning_ars, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
+def insert_bolag(bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        INSERT INTO bolag (namn, nuvarande_kurs, omsattning_ars, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5)
+        INSERT INTO bolag (bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (namn, nuvarande_kurs, omsattning_ars, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5))
+    ''', (bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5))
     conn.commit()
     conn.close()
 
-def uppdatera_bolag(id, fält, nytt_varde):
+def get_alla_bolag():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    query = f'UPDATE bolag SET {fält} = ? WHERE id = ?'
-    c.execute(query, (nytt_varde, id))
+    c.execute('SELECT * FROM bolag')
+    resultat = c.fetchall()
+    conn.close()
+    return resultat
+
+def uppdatera_bolag(id, bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        UPDATE bolag SET
+            bolag = ?,
+            nuvarande_kurs = ?,
+            omsattning_i_ar = ?,
+            omsattning_nasta_ar = ?,
+            antal_aktier = ?,
+            ps1 = ?,
+            ps2 = ?,
+            ps3 = ?,
+            ps4 = ?,
+            ps5 = ?
+        WHERE id = ?
+    ''', (bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5, id))
     conn.commit()
     conn.close()
 
