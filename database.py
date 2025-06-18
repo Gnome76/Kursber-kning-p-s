@@ -1,11 +1,8 @@
 import sqlite3
 import os
 
-# Välj databasväg beroende på körmiljö
-if os.environ.get("STREAMLIT_RUNNING_IN_CLOUD") == "true":
-    DB_PATH = "/mnt/data/database.db"
-else:
-    DB_PATH = "data/database.db"
+# Se alltid till att använda persistent lagring i Streamlit Cloud
+DB_PATH = "/mnt/data/database.db"
 
 def init_db():
     folder = os.path.dirname(DB_PATH)
@@ -13,7 +10,7 @@ def init_db():
         try:
             os.makedirs(folder, exist_ok=True)
         except PermissionError:
-            print(f"Kan inte skapa mappen {folder}, kolla rättigheter.")
+            print(f"Kan inte skapa mappen {folder}, kolla rättigheter")
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
