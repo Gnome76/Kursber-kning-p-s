@@ -1,15 +1,16 @@
 import os
 import sqlite3
 
+# Använd rätt sökväg för permanent datalagring i Streamlit Cloud
 DATA_MAPP = "/mnt/data"
 DB_SOKVAG = os.path.join(DATA_MAPP, "database.db")
 
 def initiera_databas():
-    # Skapa mappen om den inte finns
+    # Skapa mappen om den inte finns (sker normalt automatiskt, men vi säkrar upp)
     if not os.path.exists(DATA_MAPP):
-        os.makedirs(DATA_MAPP)
+        os.makedirs(DATA_MAPP, exist_ok=True)
 
-    # Skapa tabellen om den inte finns
+    # Skapa databas och tabell om de inte finns
     conn = sqlite3.connect(DB_SOKVAG)
     c = conn.cursor()
     c.execute('''
@@ -34,7 +35,14 @@ def lägg_till_bolag(bolagsnamn, nuvarande_kurs, omsättning_i_år, omsättning_
     conn = sqlite3.connect(DB_SOKVAG)
     c = conn.cursor()
     c.execute('''
-        INSERT INTO bolag (bolagsnamn, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5)
+        INSERT INTO bolag (
+            bolagsnamn,
+            nuvarande_kurs,
+            omsättning_i_år,
+            omsättning_nästa_år,
+            antal_aktier,
+            ps1, ps2, ps3, ps4, ps5
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (bolagsnamn, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5))
     conn.commit()
@@ -53,15 +61,15 @@ def uppdatera_bolag(id, nuvarande_kurs, omsättning_i_år, omsättning_nästa_å
     c = conn.cursor()
     c.execute('''
         UPDATE bolag SET
-        nuvarande_kurs = ?,
-        omsättning_i_år = ?,
-        omsättning_nästa_år = ?,
-        antal_aktier = ?,
-        ps1 = ?,
-        ps2 = ?,
-        ps3 = ?,
-        ps4 = ?,
-        ps5 = ?
+            nuvarande_kurs = ?,
+            omsättning_i_år = ?,
+            omsättning_nästa_år = ?,
+            antal_aktier = ?,
+            ps1 = ?,
+            ps2 = ?,
+            ps3 = ?,
+            ps4 = ?,
+            ps5 = ?
         WHERE id = ?
     ''', (nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5, id))
     conn.commit()
