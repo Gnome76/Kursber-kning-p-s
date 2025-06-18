@@ -1,13 +1,17 @@
-# Aktieanalysapp
+# 📈 Aktieanalys med P/S-tal (på svenska 🇸🇪)
 
-En enkel aktieanalysapp byggd med Streamlit och SQLite. 
+Den här Streamlit-appen hjälper dig att analysera svenska aktier baserat på deras P/S-tal, omsättning och aktiekurs.
 
-## Funktioner
-- Lägg till, redigera och ta bort bolag.
-- Beräkna potentiell aktiekurs baserat på omsättning och P/S-tal.
-- Visa undervärdering i procent.
-- Sortering på mest undervärderad aktie.
+## 🚀 Funktioner
+- Lägg till bolag med kurs, omsättning och fem P/S-tal
+- Få potentiell kurs idag och vid årets slut
+- Sortering efter mest undervärderade aktier
+- Redigera och ta bort bolag
+- All data sparas i `data/database.db`
 
-## Installation
+## 🛠️ Installation
 
-1. Klona repot:
+1. Klona projektet:
+   ```bash
+   git clone https://github.com/ditt-användarnamn/ditt-repo.git
+   cd ditt-repo
