@@ -1,16 +1,9 @@
 import sqlite3
-import os
 
-# Se alltid till att använda persistent lagring i Streamlit Cloud
+# ✅ Den enda tillåtna platsen för skrivbar, persistent lagring i Streamlit Cloud
 DB_PATH = "/mnt/data/database.db"
 
 def init_db():
-    folder = os.path.dirname(DB_PATH)
-    if not os.path.exists(folder):
-        try:
-            os.makedirs(folder, exist_ok=True)
-        except PermissionError:
-            print(f"Kan inte skapa mappen {folder}, kolla rättigheter")
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
