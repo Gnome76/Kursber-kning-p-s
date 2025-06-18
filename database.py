@@ -1,13 +1,11 @@
 import os
 import sqlite3
 
-DATA_MAPP = "/mnt/data"
+DATA_MAPP = "/mnt/data"  # Persistent och skrivbar mapp i Streamlit Cloud
 DB_SOKVAG = os.path.join(DATA_MAPP, "database.db")
 
 def initiera_databas():
-    if not os.path.exists(DATA_MAPP):
-        os.makedirs(DATA_MAPP)
-
+    # Mappen /mnt/data finns alltid i Streamlit Cloud, därför skapar vi den inte här
     conn = sqlite3.connect(DB_SOKVAG)
     c = conn.cursor()
     c.execute('''
@@ -42,9 +40,9 @@ def hämta_alla_bolag():
     conn = sqlite3.connect(DB_SOKVAG)
     c = conn.cursor()
     c.execute('SELECT * FROM bolag')
-    resultat = c.fetchall()
+    bolag_lista = c.fetchall()
     conn.close()
-    return resultat
+    return bolag_lista
 
 def uppdatera_bolag(id, nuvarande_kurs, omsättning_i_år, omsättning_nästa_år, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_SOKVAG)
