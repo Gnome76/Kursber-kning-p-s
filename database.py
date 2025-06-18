@@ -1,62 +1,65 @@
 import sqlite3
 import os
 
-DB_PATH = "/mnt/data/database.db"
+DATA_DIR = "/mnt/data"
+DB_PATH = os.path.join(DATA_DIR, "database.db")
 
 def init_db():
-    dir_path = os.path.dirname(DB_PATH)
-    if dir_path and not os.path.exists(dir_path):
-        os.makedirs(dir_path, exist_ok=True)
-    
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        CREATE TABLE IF NOT EXISTS companies (
+        CREATE TABLE IF NOT EXISTS bolag (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            current_price REAL,
-            revenue_this_year REAL,
-            revenue_next_year REAL,
-            shares_outstanding INTEGER,
-            ps1 REAL,
-            ps2 REAL,
-            ps3 REAL,
-            ps4 REAL,
-            ps5 REAL
+            bolag TEXT NOT NULL,
+            nuvarande_kurs REAL NOT NULL,
+            omsattning_i_ar REAL NOT NULL,
+            omsattning_nasta_ar REAL NOT NULL,
+            antal_aktier INTEGER NOT NULL,
+            ps1 REAL NOT NULL,
+            ps2 REAL NOT NULL,
+            ps3 REAL NOT NULL,
+            ps4 REAL NOT NULL,
+            ps5 REAL NOT NULL
         )
     ''')
     conn.commit()
     conn.close()
 
-def insert_company(name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, ps_values):
+def insert_bolag(bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        INSERT INTO companies (name, current_price, revenue_this_year, revenue_next_year,
-            shares_outstanding, ps1, ps2, ps3, ps4, ps5)
+        INSERT INTO bolag (bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, *ps_values))
+    ''', (bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5))
     conn.commit()
     conn.close()
 
-def get_all_companies():
+def hamta_alla_bolag():
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute('SELECT * FROM companies')
-    companies = c.fetchall()
+    c.execute('SELECT * FROM bolag')
+    rows = c.fetchall()
     conn.close()
-    return companies
+    return [dict(row) for row in rows]
 
-def update_company(company_id, field, value):
+def uppdatera_bolag(id, bolag, nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute(f'UPDATE companies SET {field} = ? WHERE id = ?', (value, company_id))
+    c.execute('''
+        UPDATE bolag
+        SET nuvarande_kurs=?, omsattning_i_ar=?, omsattning_nasta_ar=?, antal_aktier=?, ps1=?, ps2=?, ps3=?, ps4=?, ps5=?
+        WHERE id=?
+    ''', (nuvarande_kurs, omsattning_i_ar, omsattning_nasta_ar, antal_aktier, ps1, ps2, ps3, ps4, ps5, id))
     conn.commit()
     conn.close()
 
-def delete_company(company_id):
+def ta_bort_bolag(id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('DELETE FROM companies WHERE id = ?', (company_id,))
+    c.execute('DELETE FROM bolag WHERE id=?', (id,))
     conn.commit()
     conn.close()
