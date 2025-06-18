@@ -28,3 +28,14 @@ def init_db():
 
 def get_connection():
     return sqlite3.connect(DB_PATH)
+
+def update_bolag(bolag_id, namn, kurs, oms1, oms2, aktier, ps):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        UPDATE bolag
+        SET namn=?, kurs=?, oms1=?, oms2=?, aktier=?, ps1=?, ps2=?, ps3=?, ps4=?, ps5=?
+        WHERE id=?
+    """, (namn, kurs, oms1, oms2, aktier, *ps, bolag_id))
+    conn.commit()
+    conn.close()
