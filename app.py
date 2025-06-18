@@ -1,105 +1,136 @@
 import streamlit as st
-from database import init_db, insert_company, get_all_companies, update_company, delete_company
+from database import init_db, insert_bolag, hamta_alla_bolag, uppdatera_bolag, ta_bort_bolag
+import numpy as np
 
-st.set_page_config(page_title="Aktieanalys", layout="centered")
-
+# Initiera databas
 init_db()
 
-st.title("📊 Aktieanalys")
+# Session state för att tvinga omrendering
+if 'refresh' not in st.session_state:
+    st.session_state['refresh'] = False
 
-with st.form("company_form", clear_on_submit=True):
-    st.subheader("Lägg till bolag")
-    name = st.text_input("Bolag")
-    current_price = st.number_input("Nuvarande kurs", min_value=0.0, format="%.2f")
-    revenue_this_year = st.number_input("Förväntad omsättning i år", min_value=0.0, format="%.0f")
-    revenue_next_year = st.number_input("Förväntad omsättning nästa år", min_value=0.0, format="%.0f")
-    shares_outstanding = st.number_input("Antal utestående aktier", min_value=1, format="%d")
-    ps_values = [st.number_input(f"P/S {i+1}", min_value=0.0, format="%.2f") for i in range(5)]
-    
-    submitted = st.form_submit_button("Lägg till bolag")
-    if submitted:
-        if name:
-            insert_company(name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, ps_values)
-            st.success(f"{name} har lagts till!")
-            st.experimental_rerun()
-        else:
-            st.warning("Du måste ange ett bolagsnamn.")
+def tvinga_uppdatering():
+    st.session_state['refresh'] = not st.session_state['refresh']
 
-# Hämta och sortera bolagen
-companies = get_all_companies()
+def berakna_potentiell_kurs(omsattning, antal_aktier, ps_varden):
+    ps_genomsnitt = np.mean(ps_varden)
+    return (omsattning / antal_aktier) * ps_genomsnitt if antal_aktier else 0
 
-# Beräkna potentiell kurs och undervärdering
-def calculate(company):
-    _, name, current_price, rev_this, rev_next, shares, ps1, ps2, ps3, ps4, ps5 = company
-    avg_ps = sum([ps1, ps2, ps3, ps4, ps5]) / 5 if shares else 0
+st.title("Enkel Aktieanalysapp")
 
-    try:
-        potential_today = (rev_this / shares) * avg_ps if shares else 0
-        potential_year_end = (rev_next / shares) * avg_ps if shares else 0
-    except ZeroDivisionError:
-        potential_today = 0
-        potential_year_end = 0
+# Formulär för att lägga till bolag
+with st.form("lagg_till_bolag"):
+    bolag = st.text_input("Bolag")
+    nuvarande_kurs = st.number_input("Nuvarande kurs", min_value=0.0, format="%.2f")
+    omsattning_i_ar = st.number_input("Förväntad omsättning i år (MSEK)", min_value=0.0, format="%.2f")
+    omsattning_nasta_ar = st.number_input("Förväntad omsättning nästa år (MSEK)", min_value=0.0, format="%.2f")
+    antal_aktier = st.number_input("Antal utestående aktier (miljoner)", min_value=1, format="%d")
+    ps1 = st.number_input("P/S 1", min_value=0.0, format="%.2f")
+    ps2 = st.number_input("P/S 2", min_value=0.0, format="%.2f")
+    ps3 = st.number_input("P/S 3", min_value=0.0, format="%.2f")
+    ps4 = st.number_input("P/S 4", min_value=0.0, format="%.2f")
+    ps5 = st.number_input("P/S 5", min_value=0.0, format="%.2f")
 
-    undervalued_today = ((potential_today - current_price) / current_price) * 100 if current_price else 0
-    undervalued_year = ((potential_year_end - current_price) / current_price) * 100 if current_price else 0
+    lagg_till = st.form_submit_button("Lägg till bolag")
 
-    return {
-        "id": company[0],
-        "name": name,
-        "current_price": current_price,
-        "potential_today": potential_today,
-        "potential_year_end": potential_year_end,
-        "undervalued_today": undervalued_today,
-        "undervalued_year": undervalued_year,
-        "rev_this": rev_this,
-        "rev_next": rev_next,
-        "shares": shares,
-        "ps": [ps1, ps2, ps3, ps4, ps5],
-    }
+if lagg_till:
+    if bolag.strip() == "":
+        st.error("Ange bolagsnamn!")
+    else:
+        insert_bolag(
+            bolag.strip(),
+            nuvarande_kurs,
+            omsattning_i_ar,
+            omsattning_nasta_ar,
+            antal_aktier,
+            ps1, ps2, ps3, ps4, ps5
+        )
+        st.success(f"{bolag} har lagts till.")
+        tvinga_uppdatering()
 
-calculated = [calculate(c) for c in companies]
-sorted_companies = sorted(calculated, key=lambda x: x["undervalued_year"], reverse=True)
+# Hämta och sortera bolag utifrån mest undervärderad (potentiell kurs i slutet av året vs nuvarande kurs)
+bolag_lista = hamta_alla_bolag()
 
-# Visa bolag ett och ett
-if sorted_companies:
-    st.subheader("📈 Analysresultat")
+for bolag_info in bolag_lista:
+    omsattning_i_ar = bolag_info["omsattning_i_ar"]
+    omsattning_nasta_ar = bolag_info["omsattning_nasta_ar"]
+    antal_aktier = bolag_info["antal_aktier"]
+    ps_varden = [bolag_info["ps1"], bolag_info["ps2"], bolag_info["ps3"], bolag_info["ps4"], bolag_info["ps5"]]
 
-    page = st.number_input("Bläddra mellan bolag", min_value=1, max_value=len(sorted_companies), step=1)
-    selected = sorted_companies[page - 1]
+    pot_kurs_idag = berakna_potentiell_kurs(omsattning_i_ar, antal_aktier, ps_varden)
+    pot_kurs_arskiftet = berakna_potentiell_kurs(omsattning_nasta_ar, antal_aktier, ps_varden)
 
-    st.markdown(f"### {selected['name']}")
-    st.write(f"**Nuvarande kurs:** {selected['current_price']:.2f} kr")
-    st.write(f"**Potentiell kurs idag:** {selected['potential_today']:.2f} kr")
-    st.write(f"**Potentiell kurs vid årets slut:** {selected['potential_year_end']:.2f} kr")
+    undervardering_idag = (pot_kurs_idag - bolag_info["nuvarande_kurs"]) / bolag_info["nuvarande_kurs"] * 100 if bolag_info["nuvarande_kurs"] > 0 else 0
+    undervardering_arskiftet = (pot_kurs_arskiftet - bolag_info["nuvarande_kurs"]) / bolag_info["nuvarande_kurs"] * 100 if bolag_info["nuvarande_kurs"] > 0 else 0
 
-    undervalue_today = selected['undervalued_today']
-    undervalue_year = selected['undervalued_year']
-    st.write(f"**Över-/undervärdering idag:** {undervalue_today:+.2f}%")
-    st.write(f"**Över-/undervärdering slutet av året:** {undervalue_year:+.2f}%")
+    bolag_info.update({
+        "pot_kurs_idag": pot_kurs_idag,
+        "pot_kurs_arskiftet": pot_kurs_arskiftet,
+        "undervardering_idag": undervardering_idag,
+        "undervardering_arskiftet": undervardering_arskiftet
+    })
 
-    st.markdown("---")
-    st.subheader("✏️ Redigera")
+# Sortera bolag: mest undervärderad först baserat på potentiell kurs i slutet av året
+bolag_lista.sort(key=lambda b: b["undervardering_arskiftet"], reverse=True)
 
-    # Redigerbara fält
-    fields = {
-        "current_price": st.number_input("Redigera: Nuvarande kurs", value=selected["current_price"], key="edit_price"),
-        "revenue_this_year": st.number_input("Redigera: Omsättning i år", value=selected["rev_this"], key="edit_rev_this"),
-        "revenue_next_year": st.number_input("Redigera: Omsättning nästa år", value=selected["rev_next"], key="edit_rev_next"),
-        "shares_outstanding": st.number_input("Redigera: Utestående aktier", value=selected["shares"], key="edit_shares", step=1),
-    }
+# Visa bolag ett och ett med bläddring
+if "index" not in st.session_state:
+    st.session_state.index = 0
 
-    for i in range(5):
-        fields[f"ps{i+1}"] = st.number_input(f"Redigera: P/S {i+1}", value=selected["ps"][i], key=f"edit_ps{i+1}")
+def visa_bolag(index):
+    bolag_info = bolag_lista[index]
+    st.header(f"Bolag: {bolag_info['bolag']}")
+    st.write(f"Nuvarande kurs: {bolag_info['nuvarande_kurs']:.2f} SEK")
+    st.write(f"Potentiell kurs idag: {bolag_info['pot_kurs_idag']:.2f} SEK")
+    st.write(f"Potentiell kurs i slutet av året: {bolag_info['pot_kurs_arskiftet']:.2f} SEK")
+    st.write(f"Under-/Övervärdering idag: {bolag_info['undervardering_idag']:.2f} %")
+    st.write(f"Under-/Övervärdering i slutet av året: {bolag_info['undervardering_arskiftet']:.2f} %")
 
-    if st.button("Spara ändringar"):
-        for field, value in fields.items():
-            update_company(selected["id"], field, value)
-        st.success("Uppdaterad!")
-        st.experimental_rerun()
+    # Editera bolag - enkel inline edit
+    with st.expander("Redigera bolag"):
+        ny_nuvarande_kurs = st.number_input("Nuvarande kurs", value=bolag_info['nuvarande_kurs'], format="%.2f", key=f"edit_nuvarande_{index}")
+        ny_omsattning_i_ar = st.number_input("Förväntad omsättning i år (MSEK)", value=bolag_info['omsattning_i_ar'], format="%.2f", key=f"edit_omsattning_i_ar_{index}")
+        ny_omsattning_nasta_ar = st.number_input("Förväntad omsättning nästa år (MSEK)", value=bolag_info['omsattning_nasta_ar'], format="%.2f", key=f"edit_omsattning_nasta_ar_{index}")
+        ny_antal_aktier = st.number_input("Antal utestående aktier (miljoner)", value=bolag_info['antal_aktier'], format="%d", key=f"edit_antal_aktier_{index}")
+        ny_ps1 = st.number_input("P/S 1", value=bolag_info['ps1'], format="%.2f", key=f"edit_ps1_{index}")
+        ny_ps2 = st.number_input("P/S 2", value=bolag_info['ps2'], format="%.2f", key=f"edit_ps2_{index}")
+        ny_ps3 = st.number_input("P/S 3", value=bolag_info['ps3'], format="%.2f", key=f"edit_ps3_{index}")
+        ny_ps4 = st.number_input("P/S 4", value=bolag_info['ps4'], format="%.2f", key=f"edit_ps4_{index}")
+        ny_ps5 = st.number_input("P/S 5", value=bolag_info['ps5'], format="%.2f", key=f"edit_ps5_{index}")
 
-    if st.button("❌ Ta bort bolag"):
-        delete_company(selected["id"])
-        st.warning(f"{selected['name']} har tagits bort.")
-        st.experimental_rerun()
+        if st.button("Spara ändringar", key=f"spara_{index}"):
+            uppdatera_bolag(
+                bolag_info["id"],
+                bolag_info["bolag"],
+                ny_nuvarande_kurs,
+                ny_omsattning_i_ar,
+                ny_omsattning_nasta_ar,
+                ny_antal_aktier,
+                ny_ps1, ny_ps2, ny_ps3, ny_ps4, ny_ps5
+            )
+            st.success("Ändringar sparade!")
+            tvinga_uppdatering()
+
+    if st.button("Ta bort bolag", key=f"ta_bort_{index}"):
+        ta_bort_bolag(bolag_info["id"])
+        st.success(f"Bolag {bolag_info['bolag']} borttaget.")
+        # Uppdatera index om sista bolaget tas bort
+        if st.session_state.index >= len(bolag_lista) - 1:
+            st.session_state.index = max(0, len(bolag_lista) - 2)
+        tvinga_uppdatering()
+
+if bolag_lista:
+    visa_bolag(st.session_state.index)
+
+    # Bläddringsknappar
+    col1, col2, col3 = st.columns([1,4,1])
+    with col1:
+        if st.button("⬅️ Föregående") and st.session_state.index > 0:
+            st.session_state.index -= 1
+            tvinga_uppdatering()
+    with col3:
+        if st.button("Nästa ➡️") and st.session_state.index < len(bolag_lista) - 1:
+            st.session_state.index += 1
+            tvinga_uppdatering()
 else:
-    st.info("Inga bolag inlagda ännu.")
+    st.info("Inga bolag tillagda än.")
