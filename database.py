@@ -1,11 +1,11 @@
 import os
 import sqlite3
 
-DATA_MAPP = "data"
+DATA_MAPP = "/mnt/data"
 DB_SOKVAG = os.path.join(DATA_MAPP, "database.db")
 
 def initiera_databas():
-    # Skapa data-mappen om den inte finns
+    # Skapa mappen om den inte finns
     if not os.path.exists(DATA_MAPP):
         os.makedirs(DATA_MAPP)
 
