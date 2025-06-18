@@ -68,7 +68,7 @@ if companies_calc:
         if submitted:
             update_company(id, new_name, new_current_price, new_rev_this_year, new_rev_next_year, new_shares_out, new_ps1, new_ps2, new_ps3, new_ps4, new_ps5)
             st.success("Bolag uppdaterat!")
-            st.experimental_rerun()
+            st.rerun()
 
     if st.button("Ta bort bolag"):
         delete_company(id)
@@ -76,7 +76,7 @@ if companies_calc:
         # Justera index om sista bolaget togs bort
         if st.session_state.idx > 0:
             st.session_state.idx -= 1
-        st.experimental_rerun()
+        st.rerun()
 
     # Visa beräkningar snyggt
     st.markdown("---")
@@ -107,6 +107,6 @@ with st.form("add_form", clear_on_submit=True):
         try:
             insert_company(name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, ps1, ps2, ps3, ps4, ps5)
             st.success("Bolag tillagt!")
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"Något gick fel: {e}")
