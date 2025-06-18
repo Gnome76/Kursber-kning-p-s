@@ -1,11 +1,1 @@
-# Ignorera databasfilen så den inte laddas upp till GitHub
-/mnt/
 /mnt/data/database.db
-
-# Streamlit cache
-.streamlit/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*.sqlite3
