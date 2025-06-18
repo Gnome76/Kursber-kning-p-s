@@ -2,6 +2,7 @@ import streamlit as st
 from database import init_db, get_connection
 import pandas as pd
 
+# Initiera databasen
 init_db()
 
 st.title("📊 Enkel Aktieanalys App")
@@ -37,6 +38,16 @@ if rows:
         "ID", "Bolag", "Kurs", "Omsättning år 1", "Omsättning år 2",
         "Aktier", "P/S 1", "P/S 2", "P/S 3", "P/S 4", "P/S 5"
     ])
+
+    # Beräkna genomsnittligt P/S
+    df["P/S snitt"] = df[["P/S 1", "P/S 2", "P/S 3", "P/S 4", "P/S 5"]].mean(axis=1)
+
+    # Potentiell kurs idag
+    df["Pot. kurs idag"] = (df["Omsättning år 1"] / df["Aktier"]) * df["P/S snitt"]
+
+    # Potentiell kurs i slutet av året
+    df["Pot. kurs slut året"] = (df["Omsättning år 2"] / df["Aktier"]) * df["P/S snitt"]
+
     st.subheader("📄 Alla bolag")
     st.dataframe(df)
 
