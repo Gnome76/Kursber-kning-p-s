@@ -1,25 +1,11 @@
-# Python-filer
+# Ignorera databasen så den inte versioneras
+/data/database.db
+
+# Ignorera pycache och andra temporära filer
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-
-# Miljöfiler
+*.db-journal
+*.log
 .env
-.venv/
-venv/
-
-# IDE/editor-filer
-.vscode/
-.idea/
-
-# Operativsystem-specifika filer
-.DS_Store
-Thumbs.db
-
-# Streamlit session state
-.streamlit/
-
-# Databasfilen (ignorera allt i data-mappen utom .keep)
-data/*
-!data/.keep
