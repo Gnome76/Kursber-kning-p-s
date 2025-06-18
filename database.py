@@ -1,5 +1,3 @@
-# database.py
-
 import sqlite3
 import os
 
@@ -7,7 +5,7 @@ DB_PATH = "/mnt/data/database.db"
 
 def init_db():
     dir_path = os.path.dirname(DB_PATH)
-    if dir_path:  # Undvik fel om dir_path är tom
+    if dir_path and not os.path.exists(dir_path):
         os.makedirs(dir_path, exist_ok=True)
     
     conn = sqlite3.connect(DB_PATH)
@@ -34,8 +32,8 @@ def insert_company(name, current_price, revenue_this_year, revenue_next_year, sh
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        INSERT INTO companies 
-        (name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, ps1, ps2, ps3, ps4, ps5)
+        INSERT INTO companies (name, current_price, revenue_this_year, revenue_next_year,
+            shares_outstanding, ps1, ps2, ps3, ps4, ps5)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (name, current_price, revenue_this_year, revenue_next_year, shares_outstanding, *ps_values))
     conn.commit()
@@ -45,9 +43,9 @@ def get_all_companies():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT * FROM companies')
-    rows = c.fetchall()
+    companies = c.fetchall()
     conn.close()
-    return rows
+    return companies
 
 def update_company(company_id, field, value):
     conn = sqlite3.connect(DB_PATH)
